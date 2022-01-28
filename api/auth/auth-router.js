@@ -1,7 +1,42 @@
 const router = require('express').Router();
+const { BCRYPT_ROUNDS, JWT_SECRET } = require('./secret')
+const Joker = require('./auth-model')
+const bcrypt = require('bcryptjs')
+const jwt = require('jsonwebtoken')
+const { checkReqBody, checkUsernameExists } = require('./auth-middleware')
 
-router.post('/register', (req, res) => {
-  res.end('implement register, please!');
+function tokenBuilder(joke) {
+  const payload = {
+    subject: joke.tokenBuilder,
+    username: joke.username
+  }
+  const options = {
+    expiresIn: '1d'
+  }
+  const token = jwt.sign(payload, JWT_SECRET, options)
+  return token
+}
+
+router.get('/register', (req, res, next) => {
+  Joker.find()
+  .then(found => {
+    res.json(found)
+  })
+  .catch(err => {
+    next(err)
+  })
+})
+
+router.post('/register', (req, res, next) => {
+  let { username, password } = req.body
+  const hash = bcrypt.hashSync(password, BCRYPT_ROUNDS)
+  Joker.add({username, password: hash})
+  .then(newJoker => {
+    res.status(201).json(newJoker)
+  })
+  .catch(err => {
+    next(err)
+  })
   /*
     IMPLEMENT
     You are welcome to build additional middlewares to help with the endpoint's functionality.
@@ -29,8 +64,14 @@ router.post('/register', (req, res) => {
   */
 });
 
-router.post('/login', (req, res) => {
-  res.end('implement login, please!');
+router.post('/login', checkUsernameExists, (req, res, next) => {
+  if (bcrypt.compareSync(req.body.password, req.user.password)) {
+    const token = tokenBuilder(req.user)
+    req.token = token
+    res.json({ message: `welcome, ${req.user.username}`, token,})
+  } else {
+    next()
+  }
   /*
     IMPLEMENT
     You are welcome to build additional middlewares to help with the endpoint's functionality.
