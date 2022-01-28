@@ -17,26 +17,14 @@ function tokenBuilder(joke) {
   return token
 }
 
-router.get('/register', (req, res, next) => {
-  Joker.find()
-  .then(found => {
-    res.json(found)
-  })
-  .catch(err => {
-    next(err)
-  })
-})
-
 router.post('/register', checkReqBody, checkUnique, (req, res, next) => {
   let { username, password } = req.body
-  const hash = bcrypt.hashSync(password, BCRYPT_ROUNDS)
+  const hash = bcrypt.hashSync(password, 8) // NOT hashing for some reason
   Joker.add({username, password: hash})
-  .then(newJoker => {
-    res.status(201).json(newJoker)
-  })
-  .catch(err => {
-    next(err)
-  })
+    .then(newJoker => {
+      res.status(201).json(newJoker)
+    })
+    .catch(next)
   /*
     IMPLEMENT
     You are welcome to build additional middlewares to help with the endpoint's functionality.
@@ -68,7 +56,7 @@ router.post('/login', checkReqBody, checkUsernameExists, (req, res, next) => {
   if (bcrypt.compareSync(req.body.password, req.user.password)) {
     const token = tokenBuilder(req.user)
     req.token = token
-    res.json({ message: `welcome, ${req.user.username}`, token,})
+    res.status(201).json({ message: `welcome, ${req.user.username}`, token,})
   } else {
     next()
   }
