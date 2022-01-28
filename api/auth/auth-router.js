@@ -3,7 +3,7 @@ const { BCRYPT_ROUNDS, JWT_SECRET } = require('./secret')
 const Joker = require('./auth-model')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
-const { checkReqBody, checkUsernameExists } = require('./auth-middleware')
+const { checkReqBody, checkUsernameExists, checkUnique } = require('./auth-middleware')
 
 function tokenBuilder(joke) {
   const payload = {
@@ -27,7 +27,7 @@ router.get('/register', (req, res, next) => {
   })
 })
 
-router.post('/register', (req, res, next) => {
+router.post('/register', checkReqBody, checkUnique, (req, res, next) => {
   let { username, password } = req.body
   const hash = bcrypt.hashSync(password, BCRYPT_ROUNDS)
   Joker.add({username, password: hash})
@@ -64,7 +64,7 @@ router.post('/register', (req, res, next) => {
   */
 });
 
-router.post('/login', checkUsernameExists, (req, res, next) => {
+router.post('/login', checkReqBody, checkUsernameExists, (req, res, next) => {
   if (bcrypt.compareSync(req.body.password, req.user.password)) {
     const token = tokenBuilder(req.user)
     req.token = token
@@ -97,4 +97,9 @@ router.post('/login', checkUsernameExists, (req, res, next) => {
   */
 });
 
+router.use((err, req, res, next) => {
+  res.status(err.status || 500).json({
+    message: err.message
+  })
+})
 module.exports = router;
